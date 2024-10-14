@@ -1,0 +1,78 @@
+-- Script in ServerScriptService
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+-- Function to create a highlight and username label for a player
+local function setupPlayerUI(player)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local teamColor = player.Team and player.Team.TeamColor.Color or Color3.fromRGB(255, 255, 255) -- Default to white if not on a team
+
+    -- Change the character's color to the team color
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("MeshPart") or part:IsA("Part") then
+            part.BrickColor = BrickColor.new(teamColor)
+        end
+    end
+
+    -- Create a Highlight instance
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = character
+    highlight.FillColor = teamColor -- Set fill color to team color
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = teamColor -- Set outline color to team color
+    highlight.OutlineTransparency = 0
+    highlight.Parent = character
+
+    -- Create a BillboardGui for the username
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Adornee = character:WaitForChild("Head")
+    billboardGui.Size = UDim2.new(0, 200, 0, 50)
+    billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Parent = character.Head
+
+    -- Create a TextLabel for the username
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = teamColor -- Set text color to team color
+    textLabel.TextSize = 14
+    textLabel.TextScaled = false
+    textLabel.Text = player.Name
+    textLabel.Parent = billboardGui
+
+    -- Function to adjust text size based on distance
+    local function updateTextSize()
+        local camera = workspace.CurrentCamera
+        local distance = (camera.CFrame.Position - character.PrimaryPart.Position).Magnitude
+
+        -- Calculate size based on distance with a very high max distance
+        local scaleFactor = math.clamp(100 / math.max(distance, 0.1), 0.5, 1) -- Prevent division by zero
+        textLabel.TextSize = 14 * scaleFactor
+    end
+
+    -- Connect to RenderStepped to update text size
+    RunService.RenderStepped:Connect(updateTextSize)
+end
+
+-- Function to highlight all players
+local function highlightPlayers()
+    for _, player in ipairs(Players:GetPlayers()) do
+        player.CharacterAdded:Connect(function()
+            setupPlayerUI(player)
+        end)
+
+        -- Call setupPlayerUI for players already in the game
+        setupPlayerUI(player)
+    end
+end
+
+-- Connect to PlayerAdded event to highlight new players
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        setupPlayerUI(player)
+    end)
+end)
+
+-- Highlight players that are already in the game
+highlightPlayers()
